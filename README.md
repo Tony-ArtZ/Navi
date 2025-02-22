@@ -1,6 +1,6 @@
 # 🚀 Navi - Modern Terminal File Manager
 
-![Navi Demo](https://raw.githubusercontent.com/Tony-ArtZ/Navi/main/assets/preview.png)
+![Navi Demo](./assets/preview.png)
 
 Navi is a lightning-fast, feature-rich terminal file manager written in Go, offering a modern and intuitive interface with Unicode icons and color-coded elements.
 
