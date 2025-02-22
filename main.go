@@ -109,6 +109,8 @@ func main() {
 			fm.RenameFile()
 		case 'd':
 			fm.DeleteFileOrFolder()
+		case 'p':
+			fm.TogglePreview()
 		case '\n':
 			selected := fm.Files[fm.Cursor]
 			newPath := filepath.Join(fm.CurrentPath, selected)

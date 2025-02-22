@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/navi/constants"
@@ -25,6 +26,7 @@ type FileManager struct {
 	InputHandler         func(string)
 	DeleteConfirmPending bool
 	DeleteConfirmTime    time.Time
+	PreviewEnabled       bool
 }
 
 func New() (*FileManager, error) {
@@ -34,8 +36,9 @@ func New() (*FileManager, error) {
 	}
 
 	fm := &FileManager{
-		CurrentPath: currentPath,
-		Files:       utils.ListFiles(currentPath),
+		CurrentPath:    currentPath,
+		Files:          utils.ListFiles(currentPath),
+		PreviewEnabled: false,
 	}
 	return fm, nil
 }
@@ -175,6 +178,70 @@ func (fm *FileManager) DeleteFileOrFolder() {
 	}
 }
 
+func (fm *FileManager) getFilePreview(path string) string {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "Error accessing file"
+	}
+
+	if info.IsDir() {
+		files, err := os.ReadDir(path)
+		if err != nil {
+			return "Error reading directory"
+		}
+		preview := fmt.Sprintf("Directory: %d items\n", len(files))
+		for i, f := range files {
+			if i >= 5 {
+				preview += "..."
+				break
+			}
+			icon := constants.FILEICON
+			if f.IsDir() {
+				icon = constants.FOLDERICON
+			}
+			preview += fmt.Sprintf("%s %s\n", icon, f.Name())
+		}
+		return preview
+	}
+
+	if info.Size() > 1024*1024 {
+		return "File too large to preview"
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		return "Error opening file"
+	}
+	defer file.Close()
+
+	preview := make([]byte, 1000)
+	n, _ := file.Read(preview)
+	preview = preview[:n]
+
+	for _, b := range preview {
+		if b == 0 {
+			return "Binary file"
+		}
+	}
+
+	lines := strings.Split(string(preview), "\n")
+	if len(lines) > 10 {
+		lines = lines[:10]
+		return strings.Join(lines, "\n") + "\n..."
+	}
+
+	return string(preview)
+}
+
+func (fm *FileManager) TogglePreview() {
+	fm.PreviewEnabled = !fm.PreviewEnabled
+	if fm.PreviewEnabled {
+		fm.setStatus("Preview enabled")
+	} else {
+		fm.setStatus("Preview disabled")
+	}
+}
+
 func (fm *FileManager) Render() {
 	fmt.Print("\033[H\033[J")
 
@@ -192,7 +259,6 @@ func (fm *FileManager) Render() {
 			constants.RESET_COLOR)
 	}
 
-	// Render files list
 	for i, file := range fm.Files {
 		fullPath := filepath.Join(fm.CurrentPath, file)
 		fileInfo, err := os.Stat(fullPath)
@@ -225,10 +291,12 @@ func (fm *FileManager) Render() {
 		}
 	}
 
-	// Render input mode or help
 	if fm.InputMode {
 		fm.renderInputPrompt()
 	} else {
+		if fm.PreviewEnabled && len(fm.Files) > 0 {
+			fm.renderPreview()
+		}
 		fm.renderHelp()
 	}
 }
@@ -244,8 +312,26 @@ func (fm *FileManager) renderInputPrompt() {
 		constants.DARK_BG, constants.BLUE_FG, constants.BOLD, "╍", constants.RESET_COLOR)
 }
 
+func (fm *FileManager) renderPreview() {
+	if len(fm.Files) == 0 {
+		return
+	}
+
+	path := filepath.Join(fm.CurrentPath, fm.Files[fm.Cursor])
+	preview := fm.getFilePreview(path)
+
+	fmt.Printf("\n%s%s%s %s Preview %s%s\n",
+		constants.DARK_BG, constants.BLUE_FG, constants.BOLD,
+		constants.PREVIEWICON,
+		constants.RESET_COLOR, constants.RESET_COLOR)
+	fmt.Printf("%s%s%s\n%s%s",
+		constants.DARK_BG, constants.WHITE_FG,
+		preview,
+		constants.RESET_COLOR, constants.RESET_COLOR)
+}
+
 func (fm *FileManager) renderHelp() {
-	fmt.Printf("\n%s%s%s %s ↑/↓: Navigate  %s Enter: Open  %s n: New File  %s N: New Folder  %s r: Rename  %s c: Copy  %s x: Cut  %s v: Paste  %s w: Set PWD  %s d: Delete  %s q: Quit%s\n",
+	fmt.Printf("\n%s%s%s %s ↑/↓: Navigate  %s Enter: Open  %s n: New File  %s N: New Folder  %s r: Rename  %s c: Copy  %s x: Cut  %s v: Paste  %s w: Set PWD  %s d: Delete  %s p: Toggle Preview  %s q: Quit%s\n",
 		constants.FOOTER_BG, constants.WHITE_FG, constants.BOLD,
 		constants.NAVICON,
 		constants.FOLDERICON,
@@ -257,6 +343,7 @@ func (fm *FileManager) renderHelp() {
 		constants.GREEN_FG+constants.PASTEICON,
 		constants.PATHICON,
 		constants.RED_FG+"\uf1f8",
+		constants.BLUE_FG+"\uf06e",
 		constants.QUITICON,
 		constants.RESET_COLOR)
 
