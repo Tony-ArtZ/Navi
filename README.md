@@ -62,6 +62,7 @@ sudo mv navi /usr/local/bin/
 - `N` - Create new folder
 - `r` - Rename file/folder
 - `c` - Copy file/folder
+- `p` - Toggle preview
 - `x` - Cut file/folder
 - `v` - Paste file/folder
 - `w` - Set current directory as working directory
