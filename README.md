@@ -86,12 +86,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
-
-- Inspired by modern file managers like ranger
-- Built with Go's powerful standard library
-- Icons provided by Nerd Fonts
-
 ## 🐛 Bug Reports
 
 Found a bug? Please open an issue on our [GitHub repository](https://github.com/Tony-ArtZ/Navi/issues).
