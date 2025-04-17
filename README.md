@@ -65,6 +65,7 @@ sudo mv navi /usr/local/bin/
 - `p` - Toggle preview
 - `x` - Cut file/folder
 - `v` - Paste file/folder
+- `o` - Open with default app
 - `w` - Set current directory as working directory
 - `d` - Delete file/folder (with confirmation)
 - `q` - Quit
