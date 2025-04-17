@@ -111,6 +111,8 @@ func main() {
 			fm.DeleteFileOrFolder()
 		case 'p':
 			fm.TogglePreview()
+		case 'o':
+			fm.Open()
 		case '\n':
 			selected := fm.Files[fm.Cursor]
 			newPath := filepath.Join(fm.CurrentPath, selected)

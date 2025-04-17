@@ -3,8 +3,10 @@ package filemanager
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/navi/constants"
@@ -301,6 +303,52 @@ func (fm *FileManager) Render() {
 	}
 }
 
+func (fm *FileManager) Open() {
+	if len(fm.Files) == 0 {
+		fm.setStatus("No files to open")
+		return
+	}
+
+	filePath := filepath.Join(fm.CurrentPath, fm.Files[fm.Cursor])
+
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		fm.setStatus("Error: " + err.Error())
+		return
+	}
+
+	if fileInfo.IsDir() {
+		fm.CurrentPath = filePath
+		fm.Files = utils.ListFiles(fm.CurrentPath)
+		fm.Cursor = 0
+		return
+	}
+
+	// Locate the binaries for xdg-open
+	binary, lookErr := exec.LookPath("xdg-open")
+	if lookErr != nil {
+		fm.setStatus("xdg-open not found: " + lookErr.Error())
+		return
+	}
+
+	// Clear screen and replace the current Navi process with xdg-open
+	fmt.Print("\033[H\033[J")
+	err = syscall.Exec(binary, []string{binary, filePath}, os.Environ())
+
+	if err != nil {
+		fm.setStatus("Error opening file: " + err.Error())
+		return
+	}
+	if err != nil {
+		fm.setStatus("Error opening file: " + err.Error())
+		return
+	}
+
+	fm.setStatus("Opened: " + filepath.Base(filePath))
+	fmt.Print("\033[H\033[J")
+
+}
+
 func (fm *FileManager) renderInputPrompt() {
 	fmt.Printf("\n%s%s%s%s┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄%s\n",
 		constants.DARK_BG, constants.BLUE_FG, constants.BOLD, "╍", constants.RESET_COLOR)
@@ -331,18 +379,30 @@ func (fm *FileManager) renderPreview() {
 }
 
 func (fm *FileManager) renderHelp() {
-	fmt.Printf("\n%s%s%s %s ↑/↓: Navigate  %s Enter: Open  %s n: New File  %s N: New Folder  %s r: Rename  %s c: Copy  %s x: Cut  %s v: Paste  %s w: Set PWD  %s d: Delete  %s p: Toggle Preview  %s q: Quit%s\n",
+	// First row of commands
+	fmt.Printf("\n%s%s%s %s ↑/↓: Navigate  %s Enter: Open  %s n: New File  %s N: New Folder%s\n",
 		constants.FOOTER_BG, constants.WHITE_FG, constants.BOLD,
 		constants.NAVICON,
 		constants.FOLDERICON,
 		constants.FILEICON,
 		constants.FOLDERICON,
+		constants.RESET_COLOR)
+
+	// Second row of commands
+	fmt.Printf("%s%s%s %s r: Rename  %s c: Copy  %s x: Cut  %s v: Paste  %s d: Delete%s\n",
+		constants.FOOTER_BG, constants.WHITE_FG, constants.BOLD,
 		constants.BLUE_FG+"\uf044",
 		constants.BLUE_FG+constants.COPYICON,
 		constants.YELLOW_FG+constants.CUTICON,
 		constants.GREEN_FG+constants.PASTEICON,
-		constants.PATHICON,
 		constants.RED_FG+"\uf1f8",
+		constants.RESET_COLOR)
+
+	// Third row of commands
+	fmt.Printf("%s%s%s %s w: Set PWD  %s o: Open (default)  %s p: Toggle Preview  %s q: Quit%s\n",
+		constants.FOOTER_BG, constants.WHITE_FG, constants.BOLD,
+		constants.PATHICON,
+		constants.FILEICON,
 		constants.BLUE_FG+"\uf06e",
 		constants.QUITICON,
 		constants.RESET_COLOR)
@@ -350,7 +410,7 @@ func (fm *FileManager) renderHelp() {
 	if len(fm.Files) > 0 {
 		fullPath := filepath.Join(fm.CurrentPath, fm.Files[fm.Cursor])
 		if fileInfo, err := os.Stat(fullPath); err == nil {
-			fmt.Printf("%s%s%sFile: %s    %s%s%s Size: %s    %s%s%s Modified: %s%s\n",
+			fmt.Printf("\n%s%s%sFile: %s    %s%s%s Size: %s    %s%s%s Modified: %s%s\n",
 				constants.FOOTER_BG, constants.WHITE_FG, constants.BOLD,
 				fm.Files[fm.Cursor],
 				constants.GREEN_FG, constants.SIZEICON,
